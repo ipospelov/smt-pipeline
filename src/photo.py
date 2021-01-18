@@ -75,3 +75,25 @@ def slicing(photo, n):
         photos.append(constructor(photo.PhotoName + str(i), photo.PhotoSize / n))
 
     return photos
+
+def load_photos(filename, type):
+    """ Функция чтения фотографий. """
+    result = []
+    if type == "jpg":
+        constructor = JpgPhoto
+    else:
+        constructor = PngPhoto
+
+    f = open(filename, 'r')
+    for photo in f:
+        result.append(constructor(photo.split()[0], float(photo.split()[1])))
+    f.close()
+    return result
+
+
+def save_photos(filename, photos):
+    """ Функция записи фотографий. """
+    f = open(filename, 'w')
+    for elem in photos:
+        f.write(elem.PhotoName + " " + str(elem.PhotoSize) + '\n')
+    f.close()
