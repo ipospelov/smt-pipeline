@@ -14,24 +14,29 @@ class RunnableGraph:
     def __init__(self, structure: List[Union[type, Node]]) -> None:
         # TODO: pass graph structure to constructor, parse structure
 
-        # if not structure:
-        #     return
-        #
-        # for index, item in enumerate(structure[:-1]):
+        if not structure:
+            return
+        # проверяем, что типы на входах-выходах нод совпадают
+        for index, item in enumerate(structure[:-1]):
+            if item.output_type != structure[index + 1].input_type:
+                return
 
-        source = structure[0]
-        source_output_pipe = Pipe(source.output_type)
+        self.nodes = []
+        for index, item in enumerate(structure):
+            if item.output_type:  # output каналы создаются с первой ноды до предпоследней
+                pipe_o = Pipe(item.output_type)
 
-        node = structure[1]
-        node_output_pipe = Pipe(node.output_type)
+            node = item
+            if index == 0:  # если это нода-источник, то у нее только канал на выход
+                node.set_pipes(output_pipe=pipe_o)
+            elif index == len(structure) - 1:  # если это последняя нода, то у нее только канал на вход
+                node.set_pipes(input_pipe=pipe_i)
+            else:  # если это обычная нода, то у нее и вход, и выход
+                node.set_pipes(input_pipe=pipe_i, output_pipe=pipe_o)
 
-        sink = structure[2]
+            self.nodes.append(node)
+            pipe_i = pipe_o # новый input pipe не создается, т.к. все input pipe это output pipe предыдущей ноды
 
-        source.set_pipes(output_pipe=source_output_pipe)
-        node.set_pipes(input_pipe=source_output_pipe, output_pipe=node_output_pipe)
-        sink.set_pipes(input_pipe=node_output_pipe)
-
-        self.nodes = [source, node, sink]
 
         executors = {'default': ThreadPoolExecutor(max_workers=THREAD_POOL_SIZE)}
         # TODO: generate and add listeners for every node that produces a job execution
