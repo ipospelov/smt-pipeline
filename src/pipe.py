@@ -13,6 +13,10 @@ class Pipe:
             return self._buffer.pop()
 
     def push(self, data: Tuple) -> None:
-        assert type(*data) is self.data_type
+        if type(data) is not self.data_type:
+            raise TypeError
 
         self._buffer.append(data)
+
+    def is_empty(self) -> bool:
+        return not bool(self._buffer)

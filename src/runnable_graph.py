@@ -1,5 +1,6 @@
 from typing import List, Union
 
+from apscheduler.events import EVENT_JOB_EXECUTED
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.executors.pool import ThreadPoolExecutor
 
@@ -11,35 +12,39 @@ THREAD_POOL_SIZE = 4
 
 
 class RunnableGraph:
-    def __init__(self, structure: List[Union[type, Node]]) -> None:
-        # TODO: pass graph structure to constructor, parse structure
-
-        # if not structure:
-        #     return
-        #
-        # for index, item in enumerate(structure[:-1]):
-
-        source = structure[0]
-        source_output_pipe = Pipe(source.output_type)
-
-        node = structure[1]
-        node_output_pipe = Pipe(node.output_type)
-
-        sink = structure[2]
-
-        source.set_pipes(output_pipe=source_output_pipe)
-        node.set_pipes(input_pipe=source_output_pipe, output_pipe=node_output_pipe)
-        sink.set_pipes(input_pipe=node_output_pipe)
-
-        self.nodes = [source, node, sink]
+    def __init__(self) -> None:
+        self.nodes = []
 
         executors = {'default': ThreadPoolExecutor(max_workers=THREAD_POOL_SIZE)}
-        # TODO: generate and add listeners for every node that produces a job execution
         self.scheduler = BackgroundScheduler(executors=executors)
+
+        self._produce_listeners()
+
+    def link_nodes(self, source: Node, target: Node) -> None:
+        pipe = Pipe(source.output_type)
+
+        source.append_output_pipe(pipe)
+        target.append_input_pipe(pipe)
+
+        source.append_subscriber(target)
+
+        self.nodes.extend([source, target])
+
+    def _produce_listeners(self):
+        def node_listener(event):
+            subscribers = event.retval
+            if not subscribers:
+                return
+
+            for node in subscribers:
+                self.scheduler.add_job(func=node.do_work)
+
+        self.scheduler.add_listener(node_listener, EVENT_JOB_EXECUTED)
 
     def run(self) -> None:
         self.scheduler.start()
 
-        while True:
-            for node in self.nodes:
-                self.scheduler.add_job(func=node.do_work)
+        sources = {node for node in self.nodes if node.is_source}
+
+        for node in sources:
+            self.scheduler.add_job(func=node.do_work)
