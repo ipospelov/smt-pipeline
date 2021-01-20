@@ -38,6 +38,9 @@ class Node:
         else:
             output_data = self.fun()
 
+        if output_data is None:
+            return
+
         for output_pipe in self.output_pipes:
             output_pipe.push(output_data)
 
