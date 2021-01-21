@@ -5,6 +5,7 @@ from time import sleep
 import cv2
 import numpy as np
 
+from src.node_types import NodeType
 from src.nodes import Node
 from src.runnable_graph import RunnableGraph
 
@@ -62,6 +63,7 @@ filenames = (f'{i}.jpg' for i in range(sys.maxsize ** 10))
 
 def write_image_fun(img):
     cv2.imwrite(next(filenames), img)
+    return True
 
 
 def double_exposure_fun(img1, img2):
@@ -84,12 +86,12 @@ def rotate_image(img):
 
 
 def run_numerical_graph():
-    source = Node(read_image_fun, output_type=int, is_source=True)
+    source = Node(source_fun, output_type=int, node_type=NodeType.SOURCE)
     left = Node(sum_fun, input_type=int, output_type=int)
     right0 = Node(sum_fun, input_type=int, output_type=int)
     right1 = Node(multiple_fun, input_type=int, output_type=int)
     right1_duplicate = Node(power_fun, input_type=int, output_type=int)
-    sink = Node(sink_fun, input_type=tuple)
+    sink = Node(sink_fun, input_type=tuple, node_type=NodeType.SINK)
 
     graph = RunnableGraph()
 
@@ -106,9 +108,13 @@ def run_numerical_graph():
     sleep(10)
 
 
-if __name__ == '__main__':
-    source_cat = Node(read_image_fun, output_type=np.ndarray, is_source=True)
-    source_dog = Node(read_image_fun_2, output_type=np.ndarray, is_source=True)
+def run_image_precossing_graph():
+    source_cat = Node(read_image_fun,
+                      output_type=np.ndarray,
+                      node_type=NodeType.SOURCE)
+    source_dog = Node(read_image_fun_2,
+                      output_type=np.ndarray,
+                      node_type=NodeType.SOURCE)
 
     sharpen_node = Node(sharpen_fun, input_type=np.ndarray, output_type=np.ndarray)
     blur_node = Node(blur_fun, input_type=np.ndarray, output_type=np.ndarray)
@@ -116,9 +122,9 @@ if __name__ == '__main__':
     merge_node = Node(double_exposure_fun, input_type=tuple, output_type=np.ndarray)
     rotate_node = Node(rotate_image, input_type=np.ndarray, output_type=np.ndarray)
 
-    write_node = Node(write_image_fun, input_type=np.ndarray)
+    write_node = Node(write_image_fun, input_type=np.ndarray, node_type=NodeType.SINK)
 
-    graph = RunnableGraph(is_blocking=True)
+    graph = RunnableGraph(is_blocking=False)
 
     graph.link_nodes(source_cat, sharpen_node)
     graph.link_nodes(sharpen_node, merge_node)
@@ -128,3 +134,16 @@ if __name__ == '__main__':
     graph.link_nodes(blur_node, merge_node)
 
     graph.run()
+
+    sleep(1)
+
+    while True:
+        if graph.ready_to_shutdown:
+            try:
+                graph.scheduler.shutdown()
+            except:
+                break
+
+
+if __name__ == '__main__':
+    run_image_precossing_graph()
