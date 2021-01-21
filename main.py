@@ -108,7 +108,7 @@ def run_numerical_graph():
     sleep(10)
 
 
-def run_image_precossing_graph():
+def run_image_processing_graph():
     source_cat = Node(read_image_fun,
                       output_type=np.ndarray,
                       node_type=NodeType.SOURCE)
