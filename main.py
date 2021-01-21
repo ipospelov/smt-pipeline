@@ -146,4 +146,4 @@ def run_image_processing_graph():
 
 
 if __name__ == '__main__':
-    run_image_precossing_graph()
+    run_image_processing_graph()
